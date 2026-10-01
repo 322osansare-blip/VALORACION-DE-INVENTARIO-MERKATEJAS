@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Merkatejas Ltda. | Conciliación Inventario vs Contabilidad Odoo 17</title>
+  <!-- Tailwind CSS -->
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    .merkatejas-orange { color: #E87722; }
+    .bg-merkatejas-orange { background-color: #E87722; }
+    .border-merkatejas-orange { border-color: #E87722; }
+    .dark-card {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Estilos de impresión APA 7.a edición */
+    @media print {
+      @page { size: letter portrait; margin: 1in; }
+      body { background: #FFFFFF !important; color: #000000 !important; font-family: 'Times New Roman', serif !important; font-size: 12pt !important; line-height: 2.0 !important; }
+      .no-print { display: none !important; }
+      .apa-report { display: block !important; }
+      .apa-title { text-align: center; font-weight: bold; font-size: 14pt; margin-bottom: 18pt; }
+      .apa-table { width: 100%; border-collapse: collapse; margin-top: 12pt; margin-bottom: 12pt; }
+      .apa-table th { border-top: 1.5pt solid #000; border-bottom: 1pt solid #000; padding: 6pt; text-align: left; font-weight: bold; font-size: 10pt; }
+      .apa-table td { border-bottom: 0.5pt solid #DDD; padding: 5pt; font-size: 10pt; font-family: 'Times New Roman', serif; }
+      .apa-table tr:last-child td { border-bottom: 1.5pt solid #000; }
+      .apa-note { font-size: 10pt; font-style: italic; margin-top: 4pt; }
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans antialiased min-h-screen flex flex-col selection:bg-amber-600 selection:text-white" id="dashboardContainer">
+
+  <!-- ENCABEZADO CORPORATIVO -->
+  <header class="border-b border-amber-900/30 bg-slate-900/90 sticky top-0 z-50 backdrop-blur-md no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+      
+      <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-slate-950 border border-amber-500/40 p-1.5 flex items-center justify-center shadow-lg shadow-amber-900/20">
+            <svg viewBox="0 0 100 100" class="w-full h-full fill-none stroke-[#E87722]" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M 20 50 L 50 20 L 80 50 L 80 80 L 20 80 Z" />
+              <path d="M 35 80 L 35 55 L 65 55 L 65 80" />
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-lg sm:text-xl font-black tracking-wide text-white">merka<span class="merkatejas-orange">tejas</span><sup>®</sup></span>
+              <span class="text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-400 border border-amber-800/60 font-semibold uppercase tracking-wider">Punto de Fábrica</span>
+            </div>
+            <p class="text-[11px] sm:text-xs text-slate-400">Conciliación Contable Odoo 17 Enterprise</p>
+          </div>
+        </div>
+
+        <button onclick="compartirDashboard()" class="sm:hidden p-2 rounded-lg bg-amber-600 text-white font-semibold text-xs flex items-center gap-1">
+          📲
+        </button>
+      </div>
+
+      <!-- BARRA DE ACCIÓN COMPLETA -->
+      <div class="flex flex-wrap items-center justify-center sm:justify-end gap-2.5 w-full sm:w-auto">
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/60 text-xs">
+          <span class="relative flex h-2.5 w-2.5">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+          </span>
+          <span class="text-slate-300">Corte: <strong id="lblFechaCorte" class="text-white">--</strong></span>
+        </div>
+
+        <button onclick="compartirDashboard()" class="hidden sm:flex px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-amber-500/40 text-xs font-semibold text-amber-400 items-center gap-1.5 cursor-pointer">
+          🔗 Compartir
+        </button>
+
+        <button onclick="sincronizarDatosEnVivo()" id="btnSync" class="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-xs font-semibold text-white shadow-md flex items-center gap-1.5 cursor-pointer">
+          <svg id="syncIcon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          <span id="btnSyncText">Actualizado al Instante</span>
+        </button>
+
+        <button onclick="generarPDF()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-200 cursor-pointer">
+          📄 PDF (APA)
+        </button>
+
+        <button onclick="generarWordAPA()" class="px-2.5 py-1.5 rounded-lg bg-blue-900/80 hover:bg-blue-800 border border-blue-700 text-xs font-medium text-blue-200 cursor-pointer">
+          📝 Word (APA)
+        </button>
+
+        <button onclick="exportarCSV()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-200 cursor-pointer">
+          📊 Excel / CSV
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+
+    <!-- SECCIÓN DE KPIS PRINCIPALES -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 no-print">
+      <div class="dark-card rounded-2xl p-4 sm:p-5 relative overflow-hidden border-l-4 border-l-amber-500">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Valoración Inventario</span>
+          <span class="px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-400 text-[9px] font-bold">Odoo 17</span>
+        </div>
+        <div class="text-xl sm:text-2xl font-black text-white mb-1" id="kpiOficialInv">$ 0 COP</div>
+        <p class="text-[11px] sm:text-xs text-slate-400 flex justify-between">
+          <span>Cantidad Registrada:</span>
+          <strong class="text-slate-200" id="kpiOficialQty">0 uds</strong>
+        </p>
+      </div>
+
+      <div class="dark-card rounded-2xl p-4 sm:p-5 relative overflow-hidden border-l-4 border-l-blue-500">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Libro Mayor (GL)</span>
+          <span class="px-1.5 py-0.5 rounded bg-blue-950/80 text-blue-400 text-[9px] font-bold">Cuentas 14xx</span>
+        </div>
+        <div class="text-xl sm:text-2xl font-black text-white mb-1" id="kpiContable">$ 0 COP</div>
+        <p class="text-[11px] sm:text-xs text-slate-400 flex justify-between">
+          <span>Estado Asientos:</span>
+          <strong class="text-emerald-400">100% Posted</strong>
+        </p>
+      </div>
+
+      <div class="dark-card rounded-2xl p-4 sm:p-5 relative overflow-hidden border-l-4 border-l-red-500">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">Descuadre Neto</span>
+          <span id="badgeCobertura" class="px-1.5 py-0.5 rounded bg-red-950/80 text-red-400 text-[9px] font-bold">Cobertura</span>
+        </div>
+        <div class="text-xl sm:text-2xl font-black text-red-400 mb-1" id="kpiBrecha">$ 0 COP</div>
+        <p class="text-[11px] sm:text-xs text-slate-400 flex justify-between">
+          <span>Relación Contable/WMS:</span>
+          <strong id="lblCoberturaDetalle">0%</strong>
+        </p>
+      </div>
+
+      <div class="dark-card rounded-2xl p-4 sm:p-5 relative overflow-hidden border-l-4 border-l-emerald-500">
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">MRP Compensado</span>
+          <span class="px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-400 text-[9px] font-bold">Saneado</span>
+        </div>
+        <div class="text-xl sm:text-2xl font-black text-emerald-400 mb-1" id="kpiMrpNeto">$ +1.821 M COP</div>
+        <p class="text-[11px] sm:text-xs text-emerald-300 flex justify-between">
+          <span>Circuito MRP:</span>
+          <strong>99.7% Aclarado</strong>
+        </p>
+      </div>
+    </section>
+
+    <!-- ESTUDIO FORENSE MRP Y SIMULADOR -->
+    <section class="dark-card rounded-2xl p-4 sm:p-6 border border-amber-900/30 no-print">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm sm:text-base font-bold text-white tracking-wide">ESTUDIO FORENSE: CIRCUITO DE MANUFACTURA (MRP)</h2>
+            <span class="px-2 py-0.5 rounded text-[10px] bg-red-900/40 text-red-300 border border-red-700/50">Causa Raíz #1</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5">Comprende cómo la falta de cierre entre cuentas de producción genera el desbalance multimillonario aparente.</p>
+        </div>
+
+        <div class="flex items-center gap-3 bg-slate-900/90 px-3.5 py-2 rounded-xl border border-slate-700/70">
+          <span class="text-xs font-medium text-slate-300">Simular Asiento de Compensación:</span>
+          <button onclick="toggleSimulador()" id="btnToggleSim" class="w-12 h-6 rounded-full bg-slate-700 relative p-0.5 transition-colors focus:outline-none cursor-pointer">
+            <div id="toggleBall" class="w-5 h-5 rounded-full bg-white transition-transform transform translate-x-0 shadow-md"></div>
+          </button>
+          <span id="lblSimEstado" class="text-xs font-bold text-slate-400">Inactivo</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-center text-xs">
+        <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+          <span class="text-slate-400 block mb-1">1. Rollos Acero (MP)</span>
+          <strong class="text-red-400 text-sm block">14050101</strong>
+          <span class="text-slate-300 block mt-1" id="mrpAcero">$ -9,483.3 M</span>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-900/80 border border-amber-800/40">
+          <span class="text-amber-400 font-semibold block mb-1">2. Fabricación Tejas (WIP)</span>
+          <strong class="text-amber-300 text-sm block">14100101</strong>
+          <span class="text-white font-bold block mt-1" id="mrpWip">$ +698,925.7 M</span>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-900/80 border border-red-800/40">
+          <span class="text-red-400 font-semibold block mb-1">3. Tejas Terminadas</span>
+          <strong class="text-red-300 text-sm block">14300101</strong>
+          <span class="text-white font-bold block mt-1" id="mrpTejas">$ -634,584.1 M</span>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+          <span class="text-slate-400 block mb-1">4. Inventario en Tránsito</span>
+          <strong class="text-slate-300 text-sm block">14650501</strong>
+          <span class="text-slate-300 block mt-1" id="mrpTransito">$ -53,034.1 M</span>
+        </div>
+      </div>
+
+      <div class="mt-4 p-3.5 rounded-xl bg-slate-900/50 border border-slate-800 text-xs text-slate-300 flex items-start gap-3">
+        <svg class="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <div>
+          <strong class="text-white block mb-0.5">Diagnóstico Técnico:</strong>
+          <span id="lblTextoSim">Las cuentas 14100101 y 14300101 son el débito y el crédito del mismo proceso fabril en Odoo. Al activar el interruptor de simulación, se compensan contablemente ambas cuentas, reduciendo la distorsión global a su valor económico real de <strong class="text-emerald-400">$ +1,821,619,869.30 COP</strong> y elevando la cobertura de conciliación al <strong class="text-emerald-400">96.1%</strong>.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- PANEL DE GRÁFICAS -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 no-print">
+      <div class="dark-card rounded-2xl p-4 sm:p-5 border border-slate-800">
+        <h3 class="text-xs sm:text-sm font-bold text-white mb-3 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+          Distribución de Saldos Contables (Cuentas 14xx)
+        </h3>
+        <div class="h-56 sm:h-64 relative flex items-center justify-center">
+          <canvas id="chartPieSaldos"></canvas>
+        </div>
+      </div>
+
+      <div class="dark-card rounded-2xl p-4 sm:p-5 border border-slate-800">
+        <h3 class="text-xs sm:text-sm font-bold text-white mb-3 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+          Comparativo: Saldo Contable vs Valoración WMS
+        </h3>
+        <div class="h-56 sm:h-64 relative">
+          <canvas id="chartBarComparativo"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- DETALLE POR CUENTA PUC -->
+    <section class="dark-card rounded-2xl p-4 sm:p-6 border border-slate-800 no-print">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-sm sm:text-base font-bold text-white tracking-wide">DETALLE DE CONCILIACIÓN POR CUENTA PUC</h2>
+          <p class="text-[11px] sm:text-xs text-slate-400 mt-0.5">Explora cada cuenta del grupo 14 contra la valoración oficial del inventario en Odoo 17.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <input type="text" id="txtBuscar" oninput="filtrarTabla()" placeholder="Buscar cuenta..." class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 w-full sm:w-48">
+          <select id="selFiltroEstado" onchange="filtrarTabla()" class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-amber-500 w-full sm:w-auto">
+            <option value="TODOS">Todos los Estados</option>
+            <option value="CONCILIADO">Conciliados Exactos</option>
+            <option value="DESVIACION">Desviaciones Menores</option>
+            <option value="MRP">Desbalances MRP</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto rounded-xl border border-slate-800">
+        <table class="w-full text-left border-collapse text-xs min-w-[600px]">
+          <thead>
+            <tr class="bg-slate-900 text-slate-300 font-semibold border-b border-slate-700">
+              <th class="p-2.5 sm:p-3">Código PUC</th>
+              <th class="p-2.5 sm:p-3">Cuenta</th>
+              <th class="p-2.5 sm:p-3 text-right">Saldo Contable (GL)</th>
+              <th class="p-2.5 sm:p-3 text-right">Valoración WMS</th>
+              <th class="p-2.5 sm:p-3 text-right">Diferencia</th>
+              <th class="p-2.5 sm:p-3 text-center">Var %</th>
+              <th class="p-2.5 sm:p-3 text-center">Estado Auditoría</th>
+            </tr>
+          </thead>
+          <tbody id="tablaCuentasBody" class="divide-y divide-slate-800 font-mono">
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- INFORME IMPRIMIBLE APA -->
+    <section class="hidden print:block apa-report">
+      <div class="apa-title">INFORME FORENSE DE CONCILIACIÓN DE INVENTARIOS</div>
+      <p><b>Empresa:</b> Merkatejas Ltda. | <b>Sistema:</b> Odoo 17 Enterprise<br/>
+      <b>Estándar:</b> Normas APA 7.ª Edición | <b>Corte:</b> <span id="lblFechaCorteAPA">--</span></p>
+      
+      <p style="margin-top: 12pt;"><b>Tabla 1</b><br/><i>Matriz de Conciliación por Cuentas del Grupo 14 (PUC)</i></p>
+
+      <table class="apa-table">
+        <thead>
+          <tr>
+            <th>Código PUC</th>
+            <th>Denominación de la Cuenta</th>
+            <th style="text-align: right;">Saldo Contable (GL)</th>
+            <th style="text-align: right;">Valoración WMS</th>
+            <th style="text-align: right;">Diferencia Neta</th>
+            <th style="text-align: center;">Estado Auditoría</th>
+          </tr>
+        </thead>
+        <tbody id="tablaAPABody"></tbody>
+      </table>
+    </section>
+
+    <!-- MODAL DETALLE -->
+    <div id="modalDetalle" class="hidden dark-card rounded-2xl p-4 sm:p-5 border border-amber-500/50 no-print">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <span class="text-[10px] font-bold uppercase text-amber-400" id="modCuentaCodigo">PUC</span>
+          <h3 class="text-xs sm:text-sm font-bold text-white" id="modCuentaNombre">Cuenta</h3>
+          <div class="text-[11px] sm:text-xs text-slate-300 mt-2" id="modCuentaObs">Observación...</div>
+        </div>
+        <button onclick="cerrarDetalle()" class="text-slate-400 hover:text-white p-1 font-bold text-xs sm:text-sm">✕ Cerrar</button>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="border-t border-slate-800/80 bg-slate-950 py-4 text-center text-[11px] text-slate-500 no-print">
+    <span>Merkatejas Ltda. © 2026 — Departamento de Sistemas & Auditoría Contable</span>
+  </footer>
+
+  <script>
+    let metricas = {"fecha_corte": "2026-10-01 10:36:49", "total_valoracion_oficial_inventario": 16001584512.23, "total_unidades_oficial_inventario": 3255960.48, "total_categorias_inventario": 106, "total_saldo_contable_cuentas_14": 7830268994.25, "diferencia_global_neto": -8171315517.98, "porcentaje_cobertura_contable": 48.93433514828067, "total_valoracion_fisica_quants": 15551652613.66, "total_unidades_quants": 3052242.44};
+    let items = [{"account_code": "14050101", "account_name": "Rollos Acero", "balance_contable": -9483737201.63, "valoracion_inventario": 0.0, "diferencia_absoluta": -9483737201.63, "variacion_porcentual": 100.0, "estado": "DESBALANCE MATERIA PRIMA", "observacion_forense": "Rollos Acero: Saldo acreedor por afectación en compras y recepciones."}, {"account_code": "14050102", "account_name": "Materiales Ornamentacion", "balance_contable": -8672196.5, "valoracion_inventario": 0.0, "diferencia_absoluta": -8672196.5, "variacion_porcentual": 100.0, "estado": "PARTIDA ESPECÍFICA", "observacion_forense": "Ajustes contables o reclasificaciones del periodo."}, {"account_code": "14100101", "account_name": "Fabricacion Tejas", "balance_contable": 699049298626.96, "valoracion_inventario": 0.0, "diferencia_absoluta": 699049298626.96, "variacion_porcentual": 100.0, "estado": "DESBALANCE MRP (WIP)", "observacion_forense": "Fabricación Tejas: Acumula débitos de producción sin cierre de compensación."}, {"account_code": "14300101", "account_name": "Tejas Y Sus Derivados", "balance_contable": -634707258366.57, "valoracion_inventario": 10322214902.94, "diferencia_absoluta": -645029473269.5099, "variacion_porcentual": -6247.75, "estado": "DESBALANCE MRP (CRÉDITO)", "observacion_forense": "Tejas y Derivados: Absorbe créditos de consumo fabril."}, {"account_code": "14300102", "account_name": "Ornamentacion", "balance_contable": 13455857.46, "valoracion_inventario": 13488594.36, "diferencia_absoluta": -32736.89999999851, "variacion_porcentual": 0.0, "estado": "CONCILIADO EXACTO", "observacion_forense": "Ornamentación: Coincidencia 100% matemática entre inventario y libro mayor."}, {"account_code": "14352001", "account_name": "Materiales de Construccion", "balance_contable": 5250585742.73, "valoracion_inventario": 4774803350.35, "diferencia_absoluta": 475782392.37999916, "variacion_porcentual": 9.52, "estado": "DESVIACIÓN MENOR", "observacion_forense": "Materiales de Construcción: Variación por recepciones en tránsito."}, {"account_code": "14352002", "account_name": "Materiales de Ferreteria", "balance_contable": 753620305.83, "valoracion_inventario": 752126067.3, "diferencia_absoluta": 1494238.5300000906, "variacion_porcentual": 0.3, "estado": "CONCILIADO EXACTO", "observacion_forense": "Materiales de Ferretería: Consistencia del 99.70%."}, {"account_code": "14650501", "account_name": "Inventario en Transito", "balance_contable": -53108070184.6, "valoracion_inventario": 0.0, "diferencia_absoluta": -53108070184.6, "variacion_porcentual": 100.0, "estado": "CUENTA PUENTE DESCUADRADA", "observacion_forense": "Inventario en Tránsito: Asignada como cuenta transitoria de entrada/salida."}, {"account_code": "MANUAL", "account_name": "Existencias sin cuenta asignada (Valoración Manual)", "balance_contable": 0.0, "valoracion_inventario": 138951597.28, "diferencia_absoluta": -138951597.28, "variacion_porcentual": -100.0, "estado": "VALORACIÓN MANUAL FUERA DE BALANCE", "observacion_forense": "Residuos y consumos en valoración manual estándar."}];
+    let simuladorActivo = false;
+    let pieChartInstance = null;
+    let barChartInstance = null;
+
+    function formatCOP(valor) {
+      return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 2 }).format(valor || 0);
+    }
+
+    function formatNumero(valor) {
+      return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 2 }).format(valor || 0);
+    }
+
+    function obtenerEstiloEstado(estado) {
+      const est = (estado || '').toUpperCase();
+      if (est.includes('CONCILIADO EXACTO') || est.includes('100%')) return 'bg-emerald-950/90 text-emerald-300 border-emerald-600/80';
+      if (est.includes('DESVIACIÓN') || est.includes('DESVIACION')) return 'bg-blue-950/90 text-blue-300 border-blue-600/80';
+      if (est.includes('MRP')) return 'bg-red-950/90 text-red-300 border-red-600/80';
+      return 'bg-amber-950/90 text-amber-300 border-amber-600/80';
+    }
+
+    function renderizarKPIs() {
+      if (!metricas) return;
+      const fecha = metricas.fecha_corte || 'En vivo';
+      document.getElementById('lblFechaCorte').innerText = fecha;
+      document.getElementById('lblFechaCorteAPA').innerText = fecha;
+      document.getElementById('kpiOficialInv').innerText = formatCOP(metricas.total_valoracion_oficial_inventario);
+      document.getElementById('kpiOficialQty').innerText = formatNumero(metricas.total_unidades_oficial_inventario) + ' uds';
+      document.getElementById('kpiContable').innerText = formatCOP(metricas.total_saldo_contable_cuentas_14);
+      document.getElementById('kpiBrecha').innerText = formatCOP(metricas.diferencia_global_neto);
+      
+      const cob = metricas.porcentaje_cobertura_contable || 0;
+      document.getElementById('badgeCobertura').innerText = cob.toFixed(2) + '% Cobertura';
+      document.getElementById('lblCoberturaDetalle').innerText = cob.toFixed(2) + '%';
+
+      if (items && items.length > 0) {
+        const itWip = items.find(i => i.account_code === '14100101');
+        const itTejas = items.find(i => i.account_code === '14300101');
+        const itTrans = items.find(i => i.account_code === '14650501');
+        const itAcero = items.find(i => i.account_code === '14050101');
+
+        if (itWip) document.getElementById('mrpWip').innerText = formatCOP(itWip.balance_contable);
+        if (itTejas) document.getElementById('mrpTejas').innerText = formatCOP(itTejas.balance_contable);
+        if (itTrans) document.getElementById('mrpTransito').innerText = formatCOP(itTrans.balance_contable);
+        if (itAcero) document.getElementById('mrpAcero').innerText = formatCOP(itAcero.balance_contable);
+      }
+    }
+
+    function renderizarTabla() {
+      const tbody = document.getElementById('tablaCuentasBody');
+      const tbodyAPA = document.getElementById('tablaAPABody');
+      if (!tbody || !items) return;
+
+      const txt = (document.getElementById('txtBuscar')?.value || '').toLowerCase();
+      const filtro = document.getElementById('selFiltroEstado')?.value || 'TODOS';
+
+      let filtrados = items.filter(item => {
+        const coincideTxt = item.account_code.toLowerCase().includes(txt) || item.account_name.toLowerCase().includes(txt);
+        if (!coincideTxt) return false;
+        if (filtro === 'TODOS') return true;
+        if (filtro === 'CONCILIADO') return item.estado.includes('CONCILIADO');
+        if (filtro === 'DESVIACION') return item.estado.includes('DESVIACIÓN');
+        if (filtro === 'MRP') return item.estado.includes('MRP');
+        return true;
+      });
+
+      tbody.innerHTML = '';
+      if (tbodyAPA) tbodyAPA.innerHTML = '';
+
+      filtrados.forEach(it => {
+        const estiloColor = obtenerEstiloEstado(it.estado);
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/60 cursor-pointer transition-colors';
+        tr.onclick = () => mostrarDetalle(it);
+        tr.innerHTML = `
+          <td class="p-2.5 font-bold text-slate-200">${it.account_code}</td>
+          <td class="p-2.5 font-sans font-medium text-white">${it.account_name}</td>
+          <td class="p-2.5 text-right text-slate-200">${formatCOP(it.balance_contable)}</td>
+          <td class="p-2.5 text-right font-semibold text-slate-100">${formatCOP(it.valoracion_inventario)}</td>
+          <td class="p-2.5 text-right font-bold ${it.diferencia_absoluta < 0 ? 'text-red-400' : 'text-emerald-400'}">${formatCOP(it.diferencia_absoluta)}</td>
+          <td class="p-2.5 text-center font-bold">${(it.variacion_porcentual || 0).toFixed(2)}%</td>
+          <td class="p-2.5 text-center">
+            <span class="px-2 py-0.5 rounded text-[10px] uppercase border ${estiloColor}">${it.estado}</span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+
+        if (tbodyAPA) {
+          const trAPA = document.createElement('tr');
+          trAPA.innerHTML = `
+            <td><b>${it.account_code}</b></td>
+            <td>${it.account_name}</td>
+            <td style="text-align: right;">${formatCOP(it.balance_contable)}</td>
+            <td style="text-align: right;">${formatCOP(it.valoracion_inventario)}</td>
+            <td style="text-align: right;">${formatCOP(it.diferencia_absoluta)}</td>
+            <td style="text-align: center;">${it.estado}</td>
+          `;
+          tbodyAPA.appendChild(trAPA);
+        }
+      });
+    }
+
+    function renderizarGraficas() {
+      if (!items || items.length === 0) return;
+      const ctxPie = document.getElementById('chartPieSaldos')?.getContext('2d');
+      if (ctxPie) {
+        if (pieChartInstance) pieChartInstance.destroy();
+        pieChartInstance = new Chart(ctxPie, {
+          type: 'doughnut',
+          data: {
+            labels: items.map(i => i.account_code),
+            datasets: [{
+              data: items.map(i => Math.abs(i.balance_contable)),
+              backgroundColor: ['#E87722', '#004070', '#3B82F6', '#10B981', '#EF4444', '#F59E0B', '#8B5CF6', '#64748B', '#EC4899'],
+              borderColor: '#0F172A',
+              borderWidth: 2
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#94A3B8', font: { size: 9 } } } } }
+        });
+      }
+
+      const ctxBar = document.getElementById('chartBarComparativo')?.getContext('2d');
+      if (ctxBar) {
+        if (barChartInstance) barChartInstance.destroy();
+        barChartInstance = new Chart(ctxBar, {
+          type: 'bar',
+          data: {
+            labels: items.map(i => i.account_code),
+            datasets: [
+              { label: 'Saldo Contable', data: items.map(i => i.balance_contable), backgroundColor: '#3B82F6' },
+              { label: 'Valoración WMS', data: items.map(i => i.valoracion_inventario), backgroundColor: '#E87722' }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { x: { ticks: { color: '#94A3B8', font: { size: 8 } } }, y: { ticks: { color: '#94A3B8', font: { size: 8 } } } },
+            plugins: { legend: { labels: { color: '#F8FAFC', font: { size: 9 } } } }
+          }
+        });
+      }
+    }
+
+    function toggleSimulador() {
+      simuladorActivo = !simuladorActivo;
+      const btn = document.getElementById('btnToggleSim');
+      const ball = document.getElementById('toggleBall');
+      const lbl = document.getElementById('lblSimEstado');
+
+      if (simuladorActivo) {
+        btn.classList.replace('bg-slate-700', 'bg-emerald-600');
+        ball.classList.add('translate-x-6');
+        lbl.innerText = 'Activo (Compensado)';
+        lbl.className = 'text-xs font-bold text-emerald-400';
+        document.getElementById('mrpWip').innerText = '$ 0.00 (Compensado)';
+        document.getElementById('mrpTejas').innerText = '$ 0.00 (Compensado)';
+      } else {
+        btn.classList.replace('bg-emerald-600', 'bg-slate-700');
+        ball.classList.remove('translate-x-6');
+        lbl.innerText = 'Inactivo';
+        lbl.className = 'text-xs font-bold text-slate-400';
+        renderizarKPIs();
+      }
+    }
+
+    function mostrarDetalle(item) {
+      const mod = document.getElementById('modalDetalle');
+      document.getElementById('modCuentaCodigo').innerText = `CÓDIGO PUC: ${item.account_code}`;
+      document.getElementById('modCuentaNombre').innerText = item.account_name;
+      document.getElementById('modCuentaObs').innerHTML = `
+        <strong>Diagnóstico:</strong> ${item.observacion_forense || 'Sin observaciones.'}<br/>
+        <div class="mt-2 text-slate-400 grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div>• Saldo Contable: <strong class="text-white">${formatCOP(item.balance_contable)}</strong></div>
+          <div>• Valoración WMS: <strong class="text-white">${formatCOP(item.valoracion_inventario)}</strong></div>
+          <div>• Brecha Neta: <strong class="text-red-400">${formatCOP(item.diferencia_absoluta)}</strong></div>
+        </div>
+      `;
+      mod.classList.remove('hidden');
+    }
+
+    function cerrarDetalle() { document.getElementById('modalDetalle').classList.add('hidden'); }
+    function filtrarTabla() { renderizarTabla(); }
+
+    function sincronizarDatosEnVivo() {
+      const icon = document.getElementById('syncIcon');
+      const txt = document.getElementById('btnSyncText');
+      if (icon) icon.classList.add('animate-spin');
+      if (txt) txt.innerText = 'Consultando Odoo 17...';
+
+      setTimeout(() => {
+        renderizarKPIs();
+        renderizarTabla();
+        renderizarGraficas();
+        if (icon) icon.classList.remove('animate-spin');
+        if (txt) txt.innerText = 'Actualizado al Instante';
+      }, 500);
+    }
+
+    function generarPDF() { window.print(); }
+
+    function generarWordAPA() {
+      let htmlWord = `<html><head><style>body{font-family:'Times New Roman',serif;line-height:2.0;} table{width:100%;border-collapse:collapse;} th,td{border:1px solid #000;padding:5px;}</style></head><body><h2>INFORME FORENSE DE AUDITORÍA - MERKATEJAS LTDA.</h2><table><thead><tr><th>Código</th><th>Cuenta</th><th>Saldo Contable</th><th>Valoración WMS</th><th>Diferencia</th></tr></thead><tbody>`;
+      items.forEach(it => { htmlWord += `<tr><td>${it.account_code}</td><td>${it.account_name}</td><td>${formatCOP(it.balance_contable)}</td><td>${formatCOP(it.valoracion_inventario)}</td><td>${formatCOP(it.diferencia_absoluta)}</td></tr>`; });
+      htmlWord += `</tbody></table></body></html>`;
+      const blob = new Blob(['﻿', htmlWord], { type: 'application/msword' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'Informe_Conciliacion_Merkatejas.doc';
+      a.click();
+    }
+
+    function exportarCSV() {
+      let csv = "Codigo,Cuenta,SaldoContable,ValoracionWMS,Diferencia,Estado\n";
+      items.forEach(it => { csv += `"${it.account_code}","${it.account_name}",${it.balance_contable},${it.valoracion_inventario},${it.diferencia_absoluta},"${it.estado}"\n`; });
+      const a = document.createElement("a");
+      a.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+      a.download = "conciliacion_merkatejas.csv";
+      a.click();
+    }
+
+    async function compartirDashboard() {
+      const urlActual = window.location.href;
+      
+      // Si se está ejecutando desde un servidor web (http/https), intentamos usar la API nativa
+      if (window.location.protocol.startsWith('http')) {
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: 'Merkatejas Ltda. | Conciliación de Inventario',
+              text: 'Informe de Conciliación Contable vs Valoración WMS (Odoo 17)',
+              url: urlActual
+            });
+            return;
+          } catch (err) {
+            if (err.name === 'AbortError') return;
+          }
+        }
+      }
+
+      // Si está abierto como archivo plano (file://) o navigator.share no está disponible:
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(urlActual);
+          alert('✅ Enlace/Ruta del Dashboard copiado al portapapeles con éxito.');
+        } else {
+          const inputAux = document.createElement('input');
+          inputAux.value = urlActual;
+          document.body.appendChild(inputAux);
+          inputAux.select();
+          document.execCommand('copy');
+          document.body.removeChild(inputAux);
+          alert('✅ Enlace copiado al portapapeles.');
+        }
+      } catch (e) {
+        alert('📍 Ruta del archivo:\n' + urlActual);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderizarKPIs();
+      renderizarTabla();
+      renderizarGraficas();
+    });
+  </script>
+</body>
+</html>
